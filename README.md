@@ -1,0 +1,3 @@
+# Willygrad
+
+micrograd in zig
