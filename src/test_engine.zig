@@ -96,3 +96,20 @@ test "power" {
 
 }
 
+test "ReLU with positive input" {
+    var node = Value.init(6.767);
+
+    const result = try node.relu(allocator);
+    defer allocator.destroy(result);
+
+    try eq(@as(f64, 6.767), result.data); 
+}
+
+test "ReLU with negative input" {
+    var node = Value.init(-67.67);
+
+    const result = try node.relu(allocator);
+    defer allocator.destroy(result);
+
+    try eq(@as(f64, 0), result.data);
+}

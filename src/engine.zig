@@ -101,6 +101,21 @@ pub const Value = struct {
         return out;
     }
 
+
+    // Activation functions 
+
+    pub fn relu(self: *Value, allocator: std.mem.Allocator) !*Value{
+
+        const out = try allocator.create(Value);
+
+        const data = if (self.*.data > 0 ) self.*.data else 0;
+        out.* = Value.init(data);
+        out.*.op = Value.Op.relu;
+        out.*.parents =.{ self, null };
+
+        return out;
+    }
+
 };
 
 
