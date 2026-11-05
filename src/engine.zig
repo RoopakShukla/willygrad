@@ -32,7 +32,12 @@ pub const Value = struct {
     };
 
 
-    pub fn add(allocator: std.mem.Allocator, self: *Value, other: *Value) !*Value {
+    pub fn format(self: Value, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+        try writer.print("Value(data={d})", .{self.data});
+    }
+
+
+    pub fn add(self: *Value, allocator: std.mem.Allocator, other: *Value) !*Value {
 
         const out = try allocator.create(Value);
         
@@ -44,7 +49,8 @@ pub const Value = struct {
         return out;
     }
 
-    pub fn sub(allocator: std.mem.Allocator, self: *Value, other: *Value) !*Value {
+
+    pub fn sub(self: *Value, allocator: std.mem.Allocator, other: *Value) !*Value {
 
         const out = try allocator.create(Value);
 
@@ -56,7 +62,8 @@ pub const Value = struct {
         return out;
     }
 
-    pub fn mul(allocator: std.mem.Allocator, self: *Value, other: *Value) !*Value {
+
+    pub fn mul(self: *Value, allocator: std.mem.Allocator, other: *Value) !*Value {
 
         const out = try allocator.create(Value);
         
@@ -68,7 +75,8 @@ pub const Value = struct {
         return out;
     }
 
-    pub fn div(allocator: std.mem.Allocator, self: *Value, other: *Value) !*Value {
+
+    pub fn div(self: *Value, allocator: std.mem.Allocator, other: *Value) !*Value {
 
         const out = try allocator.create(Value);
         
@@ -80,7 +88,8 @@ pub const Value = struct {
         return out;
     }
 
-    pub fn pow(allocator: std.mem.Allocator, self: *Value, other: f64) !*Value{
+
+    pub fn pow(self: *Value, allocator: std.mem.Allocator, other: f64) !*Value{
 
         const out = try allocator.create(Value);
         
