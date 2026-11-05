@@ -1,5 +1,6 @@
 const std = @import("std");
 const print = std.debug.print;
+const math = std.math;
 
 
 pub const Value = struct {
@@ -28,7 +29,10 @@ pub const Value = struct {
         div,
         pow,
         relu,
-        tanh
+        tanh,
+        sigmoid,
+        linear,
+        leaky_relu
     };
 
 
@@ -89,11 +93,11 @@ pub const Value = struct {
     }
 
 
-    pub fn pow(self: *Value, allocator: std.mem.Allocator, other: f64) !*Value{
+    pub fn pow(self: *Value, allocator: std.mem.Allocator, other: f64) !*Value {
 
         const out = try allocator.create(Value);
         
-        const data = std.math.pow(f64, self.*.data, other);
+        const data = math.pow(f64, self.*.data, other);
         out.* = Value.init(data);
         out.*.op = Value.Op.pow;
         out.*.parents = .{ self, null};
@@ -104,17 +108,44 @@ pub const Value = struct {
 
     // Activation functions 
 
-    pub fn relu(self: *Value, allocator: std.mem.Allocator) !*Value{
+    pub fn relu(self: *Value, allocator: std.mem.Allocator) !*Value {
 
         const out = try allocator.create(Value);
 
         const data = if (self.*.data > 0 ) self.*.data else 0;
         out.* = Value.init(data);
         out.*.op = Value.Op.relu;
-        out.*.parents =.{ self, null };
+        out.*.parents = .{ self, null };
 
         return out;
     }
+
+
+    pub fn tanh(self: *Value, allocator: std.mem.Allocator) !*Value {
+
+        const out = try allocator.create(Value);
+
+        const data = math.tanh(self.*.data);
+        out.* = Value.init(data);
+        out.*.op = Value.Op.tanh;
+        out.*.parents = .{ self, null };
+
+        return out;
+    }
+
+
+    pub fn leaky_relu(self: *Value, allocator: std.mem.Allocator, alpha: f64) !*Value {
+
+        const out = try allocator.create(Value);
+
+        const data = if (self.*.data > 0) self.*.data else self.*.data*alpha ;
+        out.* = Value.init(data);
+        out.*.op = Value.Op.leaky_relu;
+        out.*.parents = .{ self, null };
+
+        return out ;
+    }
+
 
 };
 
