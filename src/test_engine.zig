@@ -2,6 +2,7 @@ const std = @import("std");
 const engine = @import("engine.zig");
 const testing = std.testing;
 const eq = testing.expectEqual;
+const approx = testing.expectApproxEqAbs;
 const allocator = std.testing.allocator;
 const Value = engine.Value;
 
@@ -112,4 +113,31 @@ test "ReLU with negative input" {
     defer allocator.destroy(result);
 
     try eq(@as(f64, 0), result.data);
+}
+
+test "tanh" {
+    var node = Value.init(-2);
+
+    const result = try node.tanh(allocator);
+    defer allocator.destroy(result);
+
+    try approx(@as(f64, -0.9640), result.data, 0.0001);
+}
+
+test "Leaky ReLU with positive input" {
+    var node = Value.init(6.767);
+
+    const result = try node.leaky_relu(allocator, 0.01);
+    defer allocator.destroy(result);
+
+    try eq(@as(f64, 6.767), result.data); 
+}
+
+test "Leaky ReLU with negative input" {
+    var node = Value.init(-67);
+
+    const result = try node.leaky_relu(allocator, 0.01);
+    defer allocator.destroy(result);
+
+    try eq(@as(f64, -0.67), result.data);
 }
