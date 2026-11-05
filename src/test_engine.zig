@@ -16,6 +16,12 @@ test "initialize leaf Value" {
     try eq(@as(Value.Op, Value.Op.leaf), value.op);
 }
 
+test " Value formatting" {
+    const node = Value.init(6.7);
+
+    try testing.expectFmt("Value(data=6.7)" ,"{f}", .{node});
+}
+
 test "addition" {
     var node1 = Value.init(1);
     var node2 = Value.init(2);
