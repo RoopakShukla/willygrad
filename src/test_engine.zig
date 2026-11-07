@@ -104,6 +104,10 @@ test "ReLU with positive input" {
     defer allocator.destroy(result);
 
     try eq(@as(f64, 6.767), result.data); 
+    try eq(@as(f64, 0), result.grad);
+    try eq(@as(Value.Op, Value.Op.relu), result.op);
+    try eq(@as(?*Value, &node), result.parents[0]);
+    try eq(@as(?*Value, null), result.parents[1]);
 }
 
 test "ReLU with negative input" {
@@ -113,6 +117,10 @@ test "ReLU with negative input" {
     defer allocator.destroy(result);
 
     try eq(@as(f64, 0), result.data);
+    try eq(@as(f64, 0), result.grad);
+    try eq(@as(Value.Op, Value.Op.relu), result.op);
+    try eq(@as(?*Value, node), result.parents[0]);
+    try eq(@as(?*Value, null), result.parents[1]);
 }
 
 test "tanh" {
@@ -122,6 +130,10 @@ test "tanh" {
     defer allocator.destroy(result);
 
     try approx(@as(f64, -0.9640), result.data, 0.0001);
+    try eq(@as(f64, 0), result.grad);
+    try eq(@as(Value.Op, Value.Op.tanh), result.op);
+    try eq(@as(?*Value, node), result.parents[0]);
+    try eq(@as(?*Value, null), result.parents[1]);
 }
 
 test "Leaky ReLU with positive input" {
@@ -130,7 +142,11 @@ test "Leaky ReLU with positive input" {
     const result = try node.leaky_relu(allocator, 0.01);
     defer allocator.destroy(result);
 
-    try eq(@as(f64, 6.767), result.data); 
+    try eq(@as(f64, 6.767), result.data);
+    try eq(@as(f64, 0), result.grad);
+    try eq(@as(Value.Op, Value.Op.leaky_relu), result.op);
+    try eq(@as(?*Value, node), result.parents[0]);
+    try eq(@as(?*Value, null), result.parents[1]);
 }
 
 test "Leaky ReLU with negative input" {
@@ -140,4 +156,8 @@ test "Leaky ReLU with negative input" {
     defer allocator.destroy(result);
 
     try eq(@as(f64, -0.67), result.data);
+    try eq(@as(f64, 0), result.grad);
+    try eq(@as(Value.Op, Value.Op.leaky_relu), result.op);
+    try eq(@as(?*Value, node), result.parents[0]);
+    try eq(@as(?*Value, null), result.parents[1]);
 }
