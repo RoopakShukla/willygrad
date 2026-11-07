@@ -1,6 +1,7 @@
 const std = @import("std");
 const print = std.debug.print;
 const math = std.math;
+const PI = math.pi;
 
 
 pub const Value = struct {
@@ -9,14 +10,16 @@ pub const Value = struct {
     grad: f64,
     op: Op,
     parents: [2]?*Value,
+    tmp: f64,
 
 
     pub fn init(data: f64) Value {
         return Value{
             .data = data,
-            .grad = 0.0,
+            .grad = 0,
             .parents = .{ null, null },
             .op = Value.Op.leaf,
+            .tmp = 0,
         };
     }
     
@@ -31,8 +34,9 @@ pub const Value = struct {
         relu,
         tanh,
         sigmoid,
+        leaky_relu,
+        gelu,
         linear,
-        leaky_relu
     };
 
 
@@ -101,6 +105,7 @@ pub const Value = struct {
         out.* = Value.init(data);
         out.*.op = Value.Op.pow;
         out.*.parents = .{ self, null};
+        out.*.tmp = other;
 
         return out;
     }
@@ -142,8 +147,153 @@ pub const Value = struct {
         out.* = Value.init(data);
         out.*.op = Value.Op.leaky_relu;
         out.*.parents = .{ self, null };
+        out.*.tmp = alpha;
 
-        return out ;
+        return out;
+    }
+
+
+    pub fn sigmoid(self: *Value, allocator: std.mem.Allocator) !*Value {
+
+        const out = try allocator.create(Value);
+
+        const data = 1 / (1 + math.exp(-self.data));
+        out.* = Value.init(data);
+        out.*.op = Value.Op.sigmoid;
+        out.*.parents = .{ self, null };
+
+        return out;
+    }
+
+
+    pub fn gelu(self: *Value, allocator: std.mem.Allocator) !*Value {
+
+        const out = try allocator.create(Value);
+
+        const data = (self.data / 2) * (1 + math.tanh(math.pow(f64, 2.0 / PI, 0.5) * ( self.data + 0.044715 * math.pow(f64, self.data, 3))));
+        out.* = Value.init(data);
+        out.*.op = Value.Op.gelu;
+        out.*.parents = .{ self, null };
+
+        return out;
+    }
+
+
+    pub fn linear(self: *Value, allocator: std.mem.Allocator) !*Value {
+
+        const out = try allocator.create(Value);
+
+        out.* = Value.init(self.*.data);
+        out.*.op = Value.Op.linear;
+        out.*.parents = .{ self, null };
+
+        return out;
+    }
+
+
+
+    pub fn applyBackward(self: *Value) void {
+
+
+        switch (self.*.op) {
+            Value.Op.add => {
+
+                const left = self.parents[0].?;
+                const right = self.parents[1].?;
+                
+                left.grad += self.grad;
+                right.grad += self.grad;
+            },
+
+            Value.Op.sub => {
+
+                const left = self.parents[0].?;
+                const right = self.parents[1].?;
+
+                left.grad += self.grad;
+                right.grad -= self.grad;
+            },
+            
+            Value.Op.mul => {
+
+                const left = self.parents[0].?;
+                const right = self.parents[1].?;
+
+                left.grad += right.data * self.grad;
+                right.grad += left.data * self.grad;
+            },
+
+            Value.Op.div => {
+
+                const left = self.parents[0].?;
+                const right = self.parents[1].?;
+
+                left.grad += (1 / right.data) * self.grad;
+                right.grad += (-left.data / (right.data * right.data)) * self.grad;
+            },
+
+            Value.Op.pow => {
+                const left = self.parents[0].?;
+
+                left.grad += (self.tmp) * math.pow(f64, left.data, (self.tmp - 1)) * self.grad;
+            },
+
+            Value.Op.relu => {
+
+                const left = self.parents[0].?;
+
+                if (self.data > 0) {
+                    left.grad += self.grad;
+                }
+            },
+
+            Value.Op.tanh => {
+                
+                const left = self.parents[0].?;
+
+                left.grad += (1 - self.data * self.data) * self.grad;
+            },
+
+            Value.Op.sigmoid => {
+
+                const left = self.parents[0].?;
+
+                left.grad += self.data * (1 - self.data) * self.grad;
+            },
+
+            Value.Op.leaky_relu => {
+
+                const left = self.parents[0].?;
+
+                if (left.data > 0) {
+                    left.grad += self.grad;
+                }
+                else {
+                    left.grad += self.tmp * self.grad;
+                }
+            },
+
+            Value.Op.gelu => {
+
+                const left = self.parents[0].?;
+                
+                const x: f64 = left.data;
+                const tanhU: f64 = math.tanh(@sqrt(2 / PI) * ( x + 0.044715 * x * x * x ));
+                
+                left.grad += ((0.5 * (1 + tanhU)) + (x / 2) * (1 - tanhU * tanhU) * @sqrt(2 / PI) * (1 + 3 * 0.044715 * x * x))  * self.grad;
+            },
+
+            Value.Op.linear => {
+                
+                const left = self.parents[0].?;
+
+                left.grad += self.grad;
+            },
+
+            Value.Op.leaf => {},
+
+        }
+            
     }
 
 
