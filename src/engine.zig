@@ -15,14 +15,18 @@ pub const Value = struct {
     tmp: f64,
 
 
-    pub fn init(data: f64) Value {
-        return Value{
+    pub fn init(data: f64, allocator: std.mem.Allocator) !*Value {
+
+        const out: *Value = try allocator.create(Value);
+        
+        out.* = Value{
             .data = data,
             .grad = 0,
             .parents = .{ null, null },
             .op = Value.Op.leaf,
             .tmp = 0,
         };
+        return out;
     }
     
 
