@@ -180,3 +180,12 @@ test "GeLU" {
     try approx(@as(f64, -0.158808), result.data, 0.000001);
 }
         
+test "backward" {
+    var x = Value.init(3);
+
+    const y = try x.mul(allocator, &x);
+    defer allocator.destroy(y);
+    try y.backward(allocator);
+
+    try approx(@as(f64, 6), x.grad, 0.0001);
+}

@@ -2,6 +2,8 @@ const std = @import("std");
 const print = std.debug.print;
 const math = std.math;
 const PI = math.pi;
+const HashMap = std.AutoArrayHashMapUnmanaged;
+const ArrayList = std.ArrayList;
 
 
 pub const Value = struct {
@@ -170,7 +172,7 @@ pub const Value = struct {
 
         const out = try allocator.create(Value);
 
-        const data = (self.data / 2) * (1 + math.tanh(math.pow(f64, 2.0 / PI, 0.5) * ( self.data + 0.044715 * math.pow(f64, self.data, 3))));
+        const data = (self.data / 2.0) * (1 + math.tanh(math.pow(f64, 2.0 / PI, 0.5) * ( self.data + 0.044715 * math.pow(f64, self.data, 3))));
         out.* = Value.init(data);
         out.*.op = Value.Op.gelu;
         out.*.parents = .{ self, null };
@@ -278,9 +280,9 @@ pub const Value = struct {
                 const left = self.parents[0].?;
                 
                 const x: f64 = left.data;
-                const tanhU: f64 = math.tanh(@sqrt(2 / PI) * ( x + 0.044715 * x * x * x ));
+                const tanhU: f64 = math.tanh(@sqrt(2.0 / PI) * ( x + 0.044715 * x * x * x ));
                 
-                left.grad += ((0.5 * (1 + tanhU)) + (x / 2) * (1 - tanhU * tanhU) * @sqrt(2 / PI) * (1 + 3 * 0.044715 * x * x))  * self.grad;
+                left.grad += ((0.5 * (1 + tanhU)) + (x / 2.0) * (1 - tanhU * tanhU) * @sqrt(2.0 / PI) * (1 + 3 * 0.044715 * x * x))  * self.grad;
             },
 
             Value.Op.linear => {
@@ -294,6 +296,40 @@ pub const Value = struct {
 
         }
             
+    }
+
+    pub fn backward(self: *Value, allocator: std.mem.Allocator) !void {
+        var visited: HashMap(*Value, void) = .empty;
+        defer visited.deinit(allocator);
+
+        var topo: ArrayList(*Value) = .empty;
+        defer topo.deinit(allocator);
+
+        try self.buildTopo(&visited, &topo, allocator);
+
+        self.grad = 1;
+
+        var i = topo.items.len;
+        while (i > 0) {
+            i -= 1;
+            topo.items[i].applyBackward();
+        }
+
+    }
+
+    pub fn buildTopo(node: *Value, visited: *HashMap(*Value, void), topo: *ArrayList(*Value), allocator: std.mem.Allocator) !void {
+        if (visited.contains(node)) return;
+
+        try visited.put(allocator, node, {});
+
+        for (node.parents) |parent| {
+            if (parent != null) {
+                try Value.buildTopo(parent.?, visited, topo, allocator);
+            }
+        }
+
+        try topo.append(allocator, node);
+
     }
 
 
