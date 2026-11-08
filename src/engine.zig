@@ -53,10 +53,8 @@ pub const Value = struct {
 
     pub fn add(self: *Value, allocator: std.mem.Allocator, other: *Value) !*Value {
 
-        const out = try allocator.create(Value);
-        
         const data = self.*.data + other.*.data;
-        out.* = Value.init(data);
+        const out = try Value.init(data, allocator);
         out.*.op = Value.Op.add;
         out.*.parents = .{ self, other};
         
@@ -66,10 +64,8 @@ pub const Value = struct {
 
     pub fn sub(self: *Value, allocator: std.mem.Allocator, other: *Value) !*Value {
 
-        const out = try allocator.create(Value);
-
         const data = self.*.data - other.*.data;
-        out.* = Value.init(data);
+        const out = try Value.init(data, allocator);
         out.*.op = Value.Op.sub;
         out.*.parents = .{ self, other};
 
@@ -79,10 +75,8 @@ pub const Value = struct {
 
     pub fn mul(self: *Value, allocator: std.mem.Allocator, other: *Value) !*Value {
 
-        const out = try allocator.create(Value);
-        
         const data = self.*.data * other.*.data;
-        out.* = Value.init(data);
+        const out = try Value.init(data, allocator);
         out.*.op = Value.Op.mul;
         out.*.parents = .{ self, other};
 
@@ -92,10 +86,8 @@ pub const Value = struct {
 
     pub fn div(self: *Value, allocator: std.mem.Allocator, other: *Value) !*Value {
 
-        const out = try allocator.create(Value);
-        
         const data = self.*.data / other.*.data;
-        out.* = Value.init(data);
+        const out = try Value.init(data, allocator);
         out.*.op = Value.Op.div;
         out.*.parents = .{ self, other};
 
@@ -105,10 +97,8 @@ pub const Value = struct {
 
     pub fn pow(self: *Value, allocator: std.mem.Allocator, other: f64) !*Value {
 
-        const out = try allocator.create(Value);
-        
         const data = math.pow(f64, self.*.data, other);
-        out.* = Value.init(data);
+        const out = try Value.init(data, allocator);
         out.*.op = Value.Op.pow;
         out.*.parents = .{ self, null};
         out.*.tmp = other;
@@ -121,10 +111,8 @@ pub const Value = struct {
 
     pub fn relu(self: *Value, allocator: std.mem.Allocator) !*Value {
 
-        const out = try allocator.create(Value);
-
         const data = if (self.*.data > 0 ) self.*.data else 0;
-        out.* = Value.init(data);
+        const out = try Value.init(data, allocator);
         out.*.op = Value.Op.relu;
         out.*.parents = .{ self, null };
 
@@ -134,10 +122,9 @@ pub const Value = struct {
 
     pub fn tanh(self: *Value, allocator: std.mem.Allocator) !*Value {
 
-        const out = try allocator.create(Value);
-
         const data = math.tanh(self.*.data);
-        out.* = Value.init(data);
+
+        const out = try Value.init(data, allocator);
         out.*.op = Value.Op.tanh;
         out.*.parents = .{ self, null };
 
@@ -147,10 +134,8 @@ pub const Value = struct {
 
     pub fn leaky_relu(self: *Value, allocator: std.mem.Allocator, alpha: f64) !*Value {
 
-        const out = try allocator.create(Value);
-
         const data = if (self.*.data > 0) self.*.data else self.*.data*alpha ;
-        out.* = Value.init(data);
+        const out = try Value.init(data, allocator);
         out.*.op = Value.Op.leaky_relu;
         out.*.parents = .{ self, null };
         out.*.tmp = alpha;
@@ -161,10 +146,8 @@ pub const Value = struct {
 
     pub fn sigmoid(self: *Value, allocator: std.mem.Allocator) !*Value {
 
-        const out = try allocator.create(Value);
-
         const data = 1 / (1 + math.exp(-self.data));
-        out.* = Value.init(data);
+        const out = try Value.init(data, allocator);
         out.*.op = Value.Op.sigmoid;
         out.*.parents = .{ self, null };
 
@@ -174,10 +157,8 @@ pub const Value = struct {
 
     pub fn gelu(self: *Value, allocator: std.mem.Allocator) !*Value {
 
-        const out = try allocator.create(Value);
-
         const data = (self.data / 2.0) * (1 + math.tanh(math.pow(f64, 2.0 / PI, 0.5) * ( self.data + 0.044715 * math.pow(f64, self.data, 3))));
-        out.* = Value.init(data);
+        const out = try Value.init(data, allocator);
         out.*.op = Value.Op.gelu;
         out.*.parents = .{ self, null };
 
@@ -187,9 +168,7 @@ pub const Value = struct {
 
     pub fn linear(self: *Value, allocator: std.mem.Allocator) !*Value {
 
-        const out = try allocator.create(Value);
-
-        out.* = Value.init(self.*.data);
+        const out = try Value.init(self.*.data, allocator);
         out.*.op = Value.Op.linear;
         out.*.parents = .{ self, null };
 

@@ -8,7 +8,8 @@ const Value = engine.Value;
 
 
 test "initialize leaf Value" {
-    const value = Value.init(6.7);
+    const value = try Value.init(6.7, allocator);
+    defer allocator.destroy(value);
 
     try eq(@as(f64, 6.7), value.data);
     try eq(@as(f64, 0), value.grad);
@@ -18,87 +19,102 @@ test "initialize leaf Value" {
 }
 
 test " Value formatting" {
-    const node = Value.init(6.7);
+    const node = try Value.init(6.7, allocator);
+    defer allocator.destroy(node);
 
     try testing.expectFmt("Value(data=6.7)" ,"{f}", .{node});
 }
 
 test "addition" {
-    var node1 = Value.init(1);
-    var node2 = Value.init(2);
+    var node1 = try Value.init(1, allocator);
+    const node2 = try Value.init(2, allocator);
 
-    const result = try node1.add(allocator, &node2);
+    defer allocator.destroy(node1);
+    defer allocator.destroy(node2);
+
+    const result = try node1.add(allocator, node2);
     defer allocator.destroy(result);
 
     try eq(@as(f64, 1+2), result.data);
     try eq(@as(f64, 0), result.grad);
-    try eq(@as(?*Value, &node1), result.parents[0]);
-    try eq(@as(?*Value, &node2), result.parents[1]);
+    try eq(@as(?*Value, node1), result.parents[0]);
+    try eq(@as(?*Value, node2), result.parents[1]);
     try eq(@as(Value.Op, Value.Op.add), result.op);
 }
 
 test "subtraction" {
-    var node1 = Value.init(67);
-    var node2 = Value.init(6.7);
+    var node1 = try Value.init(67, allocator);
+    const node2 = try Value.init(6.7, allocator);
 
-    const result = try node1.sub(allocator, &node2);
+    defer allocator.destroy(node1);
+    defer allocator.destroy(node2);
+
+    const result = try node1.sub(allocator, node2);
     defer allocator.destroy(result);
 
     try eq(@as(f64, 67-6.7), result.data);
     try eq(@as(f64, 0), result.grad);
-    try eq(@as(?*Value, &node1), result.parents[0]);
-    try eq(@as(?*Value, &node2), result.parents[1]);
+    try eq(@as(?*Value, node1), result.parents[0]);
+    try eq(@as(?*Value, node2), result.parents[1]);
     try eq(@as(Value.Op, Value.Op.sub), result.op);
 
 } 
 
 test "multiplication" {
-    var node1 = Value.init(6);
-    var node2 = Value.init(7);
+    var node1 = try Value.init(6, allocator);
+    const node2 = try Value.init(7, allocator);
 
-    const result = try node1.mul(allocator, &node2);
+    defer allocator.destroy(node1);
+    defer allocator.destroy(node2);
+
+    const result = try node1.mul(allocator, node2);
     defer allocator.destroy(result);
 
     try eq(@as(f64, 6*7), result.data);
     try eq(@as(f64, 0), result.grad);
-    try eq(@as(?*Value, &node1), result.parents[0]);
-    try eq(@as(?*Value, &node2), result.parents[1]);
+    try eq(@as(?*Value, node1), result.parents[0]);
+    try eq(@as(?*Value, node2), result.parents[1]);
     try eq(@as(Value.Op, Value.Op.mul), result.op);
 
 }
 
 test "division" {
-    var node1 = Value.init(22.78);
-    var node2 = Value.init(3.4);
+    var node1 = try Value.init(22.78, allocator);
+    const node2 = try Value.init(3.4, allocator);
 
-    const result = try node1.div(allocator, &node2);
+    defer allocator.destroy(node1);
+    defer allocator.destroy(node2);
+
+    const result = try node1.div(allocator, node2);
     defer allocator.destroy(result);
 
     try eq(@as(f64, 22.78/3.4), result.data);
     try eq(@as(f64, 0), result.grad);
-    try eq(@as(?*Value, &node1), result.parents[0]);
-    try eq(@as(?*Value, &node2), result.parents[1]);
+    try eq(@as(?*Value, node1), result.parents[0]);
+    try eq(@as(?*Value, node2), result.parents[1]);
     try eq(@as(Value.Op, Value.Op.div), result.op);
 
 }
 
 test "power" {
-    var node1 = Value.init(10);
+    var node = try Value.init(10, allocator);
     const exponent = 2;
+    defer allocator.destroy(node);
 
-    const result = try node1.pow(allocator, exponent);
+    const result = try node.pow(allocator, exponent);
     defer allocator.destroy(result);
 
     try eq(@as(f64, std.math.pow(f64, 10, 2)), result.data);
     try eq(@as(f64, 0), result.grad);
-    try eq(@as(?*Value, &node1), result.parents[0]);
+    try eq(@as(?*Value, node), result.parents[0]);
     try eq(@as(?*Value, null), result.parents[1]);
     try eq(@as(Value.Op, Value.Op.pow), result.op);
 
 }
 
 test "ReLU with positive input" {
-    var node = Value.init(6.767);
+    var node = try Value.init(6.767, allocator);
+    defer allocator.destroy(node);
 
     const result = try node.relu(allocator);
     defer allocator.destroy(result);
@@ -106,12 +122,13 @@ test "ReLU with positive input" {
     try eq(@as(f64, 6.767), result.data); 
     try eq(@as(f64, 0), result.grad);
     try eq(@as(Value.Op, Value.Op.relu), result.op);
-    try eq(@as(?*Value, &node), result.parents[0]);
+    try eq(@as(?*Value, node), result.parents[0]);
     try eq(@as(?*Value, null), result.parents[1]);
 }
 
 test "ReLU with negative input" {
-    var node = Value.init(-67.67);
+    var node = try Value.init(-67.67, allocator);
+    defer allocator.destroy(node);
 
     const result = try node.relu(allocator);
     defer allocator.destroy(result);
@@ -119,12 +136,13 @@ test "ReLU with negative input" {
     try eq(@as(f64, 0), result.data);
     try eq(@as(f64, 0), result.grad);
     try eq(@as(Value.Op, Value.Op.relu), result.op);
-    try eq(@as(?*Value, &node), result.parents[0]);
+    try eq(@as(?*Value, node), result.parents[0]);
     try eq(@as(?*Value, null), result.parents[1]);
 }
 
 test "tanh" {
-    var node = Value.init(-2);
+    var node = try Value.init(-2, allocator);
+    defer allocator.destroy(node);
 
     const result = try node.tanh(allocator);
     defer allocator.destroy(result);
@@ -132,12 +150,13 @@ test "tanh" {
     try approx(@as(f64, -0.9640), result.data, 0.0001);
     try eq(@as(f64, 0), result.grad);
     try eq(@as(Value.Op, Value.Op.tanh), result.op);
-    try eq(@as(?*Value, &node), result.parents[0]);
+    try eq(@as(?*Value, node), result.parents[0]);
     try eq(@as(?*Value, null), result.parents[1]);
 }
 
 test "Leaky ReLU with positive input" {
-    var node = Value.init(6.767);
+    var node = try Value.init(6.767, allocator);
+    defer allocator.destroy(node);
 
     const result = try node.leaky_relu(allocator, 0.01);
     defer allocator.destroy(result);
@@ -145,12 +164,13 @@ test "Leaky ReLU with positive input" {
     try eq(@as(f64, 6.767), result.data);
     try eq(@as(f64, 0), result.grad);
     try eq(@as(Value.Op, Value.Op.leaky_relu), result.op);
-    try eq(@as(?*Value, &node), result.parents[0]);
+    try eq(@as(?*Value, node), result.parents[0]);
     try eq(@as(?*Value, null), result.parents[1]);
 }
 
 test "Leaky ReLU with negative input" {
-    var node = Value.init(-67);
+    var node = try Value.init(-67, allocator);
+    defer allocator.destroy(node);
 
     const result = try node.leaky_relu(allocator, 0.01);
     defer allocator.destroy(result);
@@ -158,12 +178,13 @@ test "Leaky ReLU with negative input" {
     try eq(@as(f64, -0.67), result.data);
     try eq(@as(f64, 0), result.grad);
     try eq(@as(Value.Op, Value.Op.leaky_relu), result.op);
-    try eq(@as(?*Value, &node), result.parents[0]);
+    try eq(@as(?*Value, node), result.parents[0]);
     try eq(@as(?*Value, null), result.parents[1]);
 }
 
 test "sigmoid" {
-    var node = Value.init(0);
+    var node = try Value.init(0, allocator);
+    defer allocator.destroy(node);
 
     const result = try node.sigmoid(allocator);
     defer allocator.destroy(result);
@@ -172,7 +193,8 @@ test "sigmoid" {
 }
 
 test "GeLU" {
-    var node = Value.init(-1);
+    var node = try Value.init(-1, allocator);
+    defer allocator.destroy(node);
 
     const result = try node.gelu(allocator);
     defer allocator.destroy(result);
@@ -181,9 +203,10 @@ test "GeLU" {
 }
         
 test "backward" {
-    var x = Value.init(3);
+    var x = try Value.init(3, allocator);
+    defer allocator.destroy(x);
 
-    const y = try x.mul(allocator, &x);
+    const y = try x.mul(allocator, x);
     defer allocator.destroy(y);
     try y.backward(allocator);
 
