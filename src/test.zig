@@ -1,10 +1,12 @@
 const std = @import("std");
 const engine = @import("engine.zig");
+const nn = @import("nn.zig");
 const testing = std.testing;
 const eq = testing.expectEqual;
 const approx = testing.expectApproxEqAbs;
 const allocator = std.testing.allocator;
 const Value = engine.Value;
+const MLP = nn.MLP;
 
 
 test "initialize leaf Value" {
@@ -211,4 +213,28 @@ test "backward" {
     try y.backward(allocator);
 
     try approx(@as(f64, 6), x.grad, 0.0001);
+}
+
+test "MLP forward pass" {
+    var arena = std. heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+
+    const arena_allocator = arena.allocator();
+
+    var mlp = try MLP.init(arena_allocator, 3, &.{4, 3, 1});
+
+    const input = [_]*Value{
+        try Value.init(1, arena_allocator),
+        try Value.init(2, arena_allocator),
+        try Value.init(3, arena_allocator),
+    };
+
+    const output = try mlp.call(arena_allocator, &input);
+
+    try std.testing.expectEqual(@as(usize, 3), mlp.layers.items.len);
+    try std.testing.expectEqual(@as(usize, 4), mlp.layers.items[0].neurons.items.len);
+    try std.testing.expectEqual(@as(usize, 3), mlp.layers.items[1].neurons.items.len);
+    try std.testing.expectEqual(@as(usize, 1), mlp.layers.items[2].neurons.items.len);
+
+    try std.testing.expectEqual(@as(usize, 1), output.items.len);
 }
